@@ -46,7 +46,7 @@ struct proc *remove_min(struct list_head *head)
     // get process
     targetProcess = list_entry(item, struct proc, queue_elem);
 
-    // when not runnable
+    // when not runnable skip
     if (targetProcess->state != RUNNABLE)
       continue;
     
@@ -64,16 +64,16 @@ struct proc *remove_min(struct list_head *head)
     }
   }
   
-  //if no process found
+  // if no process found
   if(minProcess == NULL)
   {
     return NULL;
   }
   else
   {
-    //has process then remove and return minProcess
+    // if has process then remove and return minProcess
     // list_del(minProcess)// reinitialize??
-    list_del_init(minProcess);
+    list_del_init(&minProcess->queue_elem);
     return minProcess;
   }
 }
@@ -145,11 +145,11 @@ void assign_min_pass_value(struct proc *proc)
   proc->stride_info.pass_value = ptable.min_pass_value; // assign min_pass_value to given proc
 }
 
-/* Assign Tickets to current process by system call
+/* Assign Tickets to current (cpu running) process by system call
 */
 void assign_tickets(int tickets)
 {
-  // assign new ticket which is given by system call
+  // assign new ticket to running process (mycpu()->proc)
   myproc()->stride_info.tickets = tickets;
   // stride = a large number / number of ticket
   myproc()->stride_info.stride = (STRIDE_LARGE_NUMBER)/(tickets);
@@ -512,7 +512,6 @@ void scheduler(void)
   c->proc = 0;
 
   struct list_head *head = &ptable.queue_head;
-  struct list_head *iter;
 
   for (;;)
   {
