@@ -90,3 +90,13 @@ sys_uptime(void)
   return xticks;
 }
 
+void
+sys_stride(void)
+{
+  int tickets;
+  if(argint(0, &tickets) < 0)
+    return;
+
+  // call assign_ticket function in proc.c
+  assign_tickets(tickets);
+}

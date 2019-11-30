@@ -145,6 +145,16 @@ void assign_min_pass_value(struct proc *proc)
   proc->stride_info.pass_value = ptable.min_pass_value; // assign min_pass_value to given proc
 }
 
+/* Assign Tickets to current process by system call
+*/
+void assign_tickets(int tickets)
+{
+  // assign new ticket which is given by system call
+  myproc()->stride_info.tickets = tickets;
+  // stride = a large number / number of ticket
+  myproc()->stride_info.stride = (STRIDE_LARGE_NUMBER)/(tickets);
+}
+
 /* Initialize the process's stride_info member variables.
    The initial tickets value will be 100.
    This function is called from allocproc().
@@ -152,7 +162,7 @@ void assign_min_pass_value(struct proc *proc)
 void initialize_stride_info(struct proc *proc)
 {
   proc->stride_info.tickets = 100;
-  proc->stride_info.pass_value = 0;
+  proc->stride_info.pass_value = 0; // should start from zero
   // stride = a large number / number of ticket
   proc->stride_info.stride = (STRIDE_LARGE_NUMBER) / (proc->stride_info.tickets);
 }

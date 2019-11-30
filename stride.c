@@ -25,7 +25,7 @@ void stridetest(void)
       int tickets = 100 * (n + 1);
 
       // please implement the stride() system call
-      // stride(tickets);
+      stride(tickets);
       uint start_ticks = uptime();
       uint end_ticks;
       int first = 1;
