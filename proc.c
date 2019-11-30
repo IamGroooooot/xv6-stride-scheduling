@@ -525,7 +525,7 @@ void scheduler(void)
     p = remove_min(head);
 
     // if runnable process is found, run it
-    if(p)
+    if(p != NULL)
     {
       // 2. run p for quantum
       // Switch to chosen process.  It is the process's job
