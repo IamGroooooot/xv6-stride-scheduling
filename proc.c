@@ -36,9 +36,46 @@ static void wakeup1(void *chan);
 */
 struct proc *remove_min(struct list_head *head)
 {
-  // please implement the function below
+  struct proc *targetProcess = NULL;
+  struct proc *minProcess = NULL;
+  struct list_head *item = NULL;
 
-  return NULL;
+  // iterate all list
+  list_for_each(item, head)
+  {
+    // get process
+    targetProcess = list_entry(item, struct proc, queue_elem);
+
+    // when not runnable
+    if (targetProcess->state != RUNNABLE)
+      continue;
+    
+    // find min
+    if(minProcess == NULL) // just store at first
+    {
+      minProcess = targetProcess;
+    }
+    else
+    { // if minProcess is larger store smaller one
+      if(minProcess->stride_info.pass_value > targetProcess->stride_info.pass_value)
+      {
+        minProcess = targetProcess;
+      }
+    }
+  }
+  
+  //if no process found
+  if(minProcess == NULL)
+  {
+    return NULL;
+  }
+  else
+  {
+    //has process then remove and return minProcess
+    // list_del(minProcess)// reinitialize??
+    list_del_init(minProcess);
+    return minProcess;
+  }
 }
 
 /* Update the process' pass value after a run by the scheduler.
@@ -46,7 +83,7 @@ struct proc *remove_min(struct list_head *head)
 */
 void update_pass_value(struct proc *proc)
 {
-  // please implement the function below
+  proc->stride_info.pass_value += proc->stride_info.stride;
 }
 
 /* Update the global variable, ptable.min_pass_value, after a process' run by the scheduler.
@@ -55,7 +92,40 @@ void update_pass_value(struct proc *proc)
 */
 void update_min_pass_value()
 {
-  // please implement the function below
+  struct proc *targetProcess = NULL;
+  int isFirst = 1; // to determine if finding minimun value is just started
+  long long minPassValue = 0; // minimun pass value is at least 0
+  long long itemPassValue = 0;
+  struct list_head *item = NULL;
+  struct list_head *head = &ptable.queue_head;
+
+  // iterate all list
+  list_for_each(item, head)
+  {
+    targetProcess = list_entry(item, struct proc, queue_elem);
+
+    // when not runnable skip
+    if (targetProcess->state != RUNNABLE)
+      continue;
+    
+    itemPassValue = targetProcess->stride_info.pass_value;
+    // find minimun pass value
+    if(isFirst)
+    { // when first just store anything 
+      minPassValue = itemPassValue;
+      isFirst = 0;
+    }
+    else
+    { // if smaller one is found, store that as minPassValue
+      if(minPassValue > itemPassValue)
+      {
+        minPassValue = itemPassValue;
+      }
+    }
+  }
+
+  // update min value to global variable
+  ptable.min_pass_value = minPassValue;
 }
 
 /* Insert the current process into the queue after a run by the scheduler.
@@ -63,7 +133,8 @@ void update_min_pass_value()
 */
 void insert(struct list_head *head, struct proc *current)
 {
-  // please implement the function below
+  INIT_LIST_HEAD(&current->queue_elem);
+  list_add_tail(&current->queue_elem, head);
 }
 
 /* Assign the lowest pass value in the system to a new process or wake-up process.
@@ -71,7 +142,7 @@ void insert(struct list_head *head, struct proc *current)
 */
 void assign_min_pass_value(struct proc *proc)
 {
-  // please implement the function below
+  proc->stride_info.pass_value = ptable.min_pass_value; // assign min_pass_value to given proc
 }
 
 /* Initialize the process's stride_info member variables.
@@ -80,7 +151,10 @@ void assign_min_pass_value(struct proc *proc)
 */
 void initialize_stride_info(struct proc *proc)
 {
-  // please implement the function below
+  proc->stride_info.tickets = 100;
+  proc->stride_info.pass_value = 0;
+  // stride = a large number / number of ticket
+  proc->stride_info.stride = (STRIDE_LARGE_NUMBER) / (proc->stride_info.tickets);
 }
 
 void pinit(void)
@@ -438,14 +512,13 @@ void scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
 
-    // The following part needs to be modified for stride scheduling
-    list_for_each(iter, head)
+    // 1. pick client with min pass
+    p = remove_min(head);
+
+    // if runnable process is found, run it
+    if(p)
     {
-      p = list_entry(iter, struct proc, queue_elem);
-
-      if (p->state != RUNNABLE)
-        continue;
-
+      // 2. run p for quantum
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
@@ -459,6 +532,12 @@ void scheduler(void)
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
+      // 3. update pass using stride
+      update_pass_value(p);
+      // 4. return current process to queue       
+      insert(head,p);
+      // after process run, update ptable min value
+      update_min_pass_value();
     }
 
     release(&ptable.lock);
